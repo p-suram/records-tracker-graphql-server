@@ -48,17 +48,31 @@ const typeDefs = `
     }
 `;
 
-const getAllRecordsInRadiusAndPublish = async (latitude, longitude, radiusInMiles) => {
+const getHomicideRecordsAndPublish = async (latitude, longitude, radiusInMiles) => {
     try {
-        console.log("making api to homicide");
         const response = await fetch(`http://localhost:8080/homicide-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
         const data = await response.json();
-        console.log("response from api", data);
         pubSub.publish(records_in_radius, {
             recordInRadius: data});
     } catch (error) {
-        console.error("Error fetching greeting:", error);
+        console.error("Error fetching homicide:", error);
     }
+}
+
+const getTheftRecordsAndPublish = async (latitude, longitude, radiusInMiles) => {
+    try {
+        const response = await fetch(`http://localhost:8080/theft-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
+        const data = await response.json();
+        pubSub.publish(records_in_radius, {
+            recordInRadius: data});
+    } catch (error) {
+        console.error("Error fetching theft records:", error);
+    }
+}
+
+const getAllRecordsInRadiusAndPublish = async (latitude, longitude, radiusInMiles) => {
+    getHomicideRecordsAndPublish(latitude, longitude, radiusInMiles);
+    getTheftRecordsAndPublish(latitude, longitude, radiusInMiles);
 }
 
 const resolvers = {
