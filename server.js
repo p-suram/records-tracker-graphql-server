@@ -11,7 +11,7 @@ const {
 
 const { WebSocketServer } = require("ws");
 const { useServer } = require("graphql-ws/lib/use/ws");
-const { PubSub } = require("graphql-subscriptions");
+const { PubSub, withFilter } = require("graphql-subscriptions");
 
 const port = 4000;
 
@@ -40,52 +40,66 @@ const typeDefs = `
         caseDetail: CaseDetail!
     }
     type Query {
-        getRecordsInRadius(latitude: Float!, longitude: Float!, radiusInMiles: Float!): [Record]
+        getRecordsInRadius(latitude: Float!, longitude: Float!, radiusInMiles: Float!, userID: ID!): [Record]
     }
-
+    type RecordSubscriptionResponse {
+        records: [Record]!
+        userID: ID!
+    }
     type Subscription {
-        recordInRadius: [Record]!
+        recordInRadius(userID: ID!): RecordSubscriptionResponse
     }
 `;
 
-const getHomicideRecordsAndPublish = async (latitude, longitude, radiusInMiles) => {
+const getHomicideRecordsAndPublish = async (latitude, longitude, radiusInMiles, userID) => {
     try {
-        const response = await fetch(`http://localhost:8080/homicide-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
+        const response = await fetch(`http://localhost:5000/homicide-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
         const data = await response.json();
-        pubSub.publish(records_in_radius, {
-            recordInRadius: data});
+        const recordInRadius = {
+                records: data, 
+                userID
+        }
+        pubSub.publish(records_in_radius, { recordInRadius });
     } catch (error) {
         console.error("Error fetching homicide:", error);
     }
 }
 
-const getTheftRecordsAndPublish = async (latitude, longitude, radiusInMiles) => {
+const getTheftRecordsAndPublish = async (latitude, longitude, radiusInMiles, userID) => {
     try {
-        const response = await fetch(`http://localhost:8080/theft-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
+        const response = await fetch(`http://localhost:5000/theft-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
         const data = await response.json();
-        pubSub.publish(records_in_radius, {
-            recordInRadius: data});
+        const recordInRadius = {
+            records: data, 
+            userID
+        }
+        pubSub.publish(records_in_radius, { recordInRadius });
     } catch (error) {
         console.error("Error fetching theft records:", error);
     }
 }
 
-const getAllRecordsInRadiusAndPublish = async (latitude, longitude, radiusInMiles) => {
-    getHomicideRecordsAndPublish(latitude, longitude, radiusInMiles);
-    getTheftRecordsAndPublish(latitude, longitude, radiusInMiles);
+const getAllRecordsInRadiusAndPublish = (latitude, longitude, radiusInMiles, userID) => {
+    getHomicideRecordsAndPublish(latitude, longitude, radiusInMiles, userID);
+    getTheftRecordsAndPublish(latitude, longitude, radiusInMiles, userID);
 }
 
 const resolvers = {
   Query: {
     getRecordsInRadius (parent, args, context, info) {
-        const { latitude, longitude, radiusInMiles } = args;
-        getAllRecordsInRadiusAndPublish(latitude, longitude, radiusInMiles);
+        const { latitude, longitude, radiusInMiles, userID } = args;
+        getAllRecordsInRadiusAndPublish(latitude, longitude, radiusInMiles, userID);
         return [];
     }
   },
   Subscription: {
     recordInRadius: {
-        subscribe: () => pubSub.asyncIterator([records_in_radius]),
+        subscribe: withFilter(
+            () => pubSub.asyncIterator([records_in_radius]),
+            (payload, variables) => {
+              return payload.recordInRadius.userID === variables.userID;
+            }
+        ),
     },
   },
 };
