@@ -13,7 +13,7 @@ const { WebSocketServer } = require("ws");
 const { useServer } = require("graphql-ws/lib/use/ws");
 const { PubSub, withFilter } = require("graphql-subscriptions");
 
-const port = 4000;
+const port = process.env.PORT || 4000;
 
 const records_in_radius = "RECORDS_IN_RADIUS";
 
@@ -53,7 +53,7 @@ const typeDefs = `
 
 const getHomicideRecordsAndPublish = async (latitude, longitude, radiusInMiles, userID) => {
     try {
-        const response = await fetch(`http://localhost:5000/homicide-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
+        const response = await fetch(`http://crime-records-svc-env.eba-kbitdbmz.us-east-1.elasticbeanstalk.com/homicide-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
         const data = await response.json();
         const recordInRadius = {
                 records: data, 
@@ -67,7 +67,7 @@ const getHomicideRecordsAndPublish = async (latitude, longitude, radiusInMiles, 
 
 const getTheftRecordsAndPublish = async (latitude, longitude, radiusInMiles, userID) => {
     try {
-        const response = await fetch(`http://localhost:5000/theft-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
+        const response = await fetch(`http://crime-records-svc-env.eba-kbitdbmz.us-east-1.elasticbeanstalk.com/theft-records/records-in-radius?latitude=${latitude}&longitude=${longitude}&radiusInMiles=${radiusInMiles}`);
         const data = await response.json();
         const recordInRadius = {
             records: data, 
